@@ -7,3 +7,17 @@ type Number struct {
 	Country   string
 	Number    int64
 }
+
+type NumbersFilter struct {
+	Limit int
+}
+
+type Operation string
+
+const (
+	Select Operation = "get"
+	Update Operation = "change"
+	Insert Operation = "insert"
+	Delete Operation = "delete"
+	Exit   Operation = "exit"
+)

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"phonebook/internal/handlers"
+	"phonebook/internal/repository"
+	"phonebook/internal/services"
 	pkgpostgres "phonebook/pkg/postgres"
 )
 
@@ -25,6 +28,11 @@ func main() {
 		logger.Fatal(fmt.Errorf("couldn't ping database: %w", err))
 	}
 
-	//repo := repository.NewRepository(pool, logger)
-	//fmt.Println(repo.Numbers(context.Background()))
+	repo := repository.NewRepository(pool, logger)
+
+	numbersService := services.NewNumberService(repo, logger)
+
+	numbersHandler := handlers.NewNumbers(logger, numbersService)
+
+	numbersHandler.GetQuery()
 }
