@@ -8,7 +8,7 @@ import (
 )
 
 type NumbersService interface {
-	Numbers(ctx context.Context, filter domain.NumbersFilter, operation domain.Operation) (any, error)
+	Numbers(ctx context.Context, operation domain.Operation) (any, error)
 }
 
 type Numbers struct {
@@ -25,10 +25,7 @@ func NewNumbers(logger logrus.FieldLogger, service NumbersService) *Numbers {
 
 func (n *Numbers) GetQuery() error {
 	for {
-		operation, err := parsing.ParsQuery()
-		if err != nil {
-			return err
-		}
+		operation := parsing.ParsQuery()
 
 		if operation == "" {
 			continue
@@ -36,12 +33,7 @@ func (n *Numbers) GetQuery() error {
 			break
 		}
 
-		filter, err := parsing.ParsFilter()
-		if err != nil {
-			return err
-		}
-
-		n.service.Numbers(context.Background(), *filter, operation)
+		n.service.Numbers(context.Background(), operation)
 	}
 	return nil
 }

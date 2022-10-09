@@ -16,7 +16,7 @@ type Operation string
 
 const (
 	Select Operation = "get"
-	Update Operation = "change"
+	Update Operation = "update"
 	Insert Operation = "insert"
 	Delete Operation = "delete"
 	Exit   Operation = "exit"

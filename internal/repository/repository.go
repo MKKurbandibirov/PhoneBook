@@ -24,4 +24,7 @@ func NewRepository(pool *pgxpool.Pool, logger logrus.FieldLogger) Repository {
 
 type Repository interface {
 	Numbers(ctx context.Context) ([]domain.Number, error)
+	AddNumber(ctx context.Context) (int, error)
+	ChangeNumber(ctx context.Context) error
+	DeleteNumber(ctx context.Context) error
 }

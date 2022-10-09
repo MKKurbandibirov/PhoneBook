@@ -1,49 +1,56 @@
 package parsing
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"phonebook/internal/domain"
+	"strconv"
 	"strings"
 )
 
-func ParsQuery() (domain.Operation, error) {
+func ParsQuery() domain.Operation {
 	var queryType string
+	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf("Enter a query name:\n\t1: get;\n\t2: insert;\n\t3: update;\n\t4: delete\n\t5: exit\n")
-	_, err := fmt.Scan(&queryType)
-	if err != nil {
-		return "", err
-	}
-	queryType = strings.ToLower(queryType)
+	scanner.Scan()
+	queryType = strings.ToLower(scanner.Text())
 	switch queryType {
 	case "get":
-		return domain.Operation("get"), nil
+		return domain.Operation("get")
 	case "1":
-		return domain.Operation("get"), nil
+		return domain.Operation("get")
 	case "insert":
-		return domain.Operation("insert"), nil
+		return domain.Operation("insert")
 	case "2":
-		return domain.Operation("insert"), nil
+		return domain.Operation("insert")
 	case "update":
-		return domain.Operation("update"), nil
+		return domain.Operation("update")
 	case "3":
-		return domain.Operation("update"), nil
+		return domain.Operation("update")
 	case "delete":
-		return domain.Operation("delete"), nil
+		return domain.Operation("delete")
 	case "4":
-		return domain.Operation("delete"), nil
+		return domain.Operation("delete")
 	case "exit":
-		return domain.Operation("exit"), nil
+		return domain.Operation("exit")
 	case "5":
-		return domain.Operation("exit"), nil
+		return domain.Operation("exit")
 	default:
-		return "", nil
+		return ""
 	}
 }
 
 func ParsFilter() (*domain.NumbersFilter, error) {
 	var limit int
+	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Printf("Enter a count of rows: ")
-	_, err := fmt.Scan(&limit)
+	scanner.Scan()
+	text := scanner.Text()
+	if text == "" {
+		return &domain.NumbersFilter{Limit: -1}, nil
+	}
+	limit, err := strconv.Atoi(text)
 	if err != nil {
 		return nil, err
 	}

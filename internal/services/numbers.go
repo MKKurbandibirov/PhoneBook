@@ -3,12 +3,16 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"phonebook/internal/domain"
 )
 
 type numbersRepo interface {
 	Numbers(ctx context.Context) ([]domain.Number, error)
+	AddNumber(ctx context.Context) (int, error)
+	ChangeNumber(ctx context.Context) error
+	DeleteNumber(ctx context.Context) error
 }
 
 type NumbersService struct {
@@ -23,7 +27,7 @@ func NewNumberService(repo numbersRepo, logger log.FieldLogger) *NumbersService 
 	}
 }
 
-func (s *NumbersService) Numbers(ctx context.Context, filter domain.NumbersFilter,
+func (s *NumbersService) Numbers(ctx context.Context,
 	operation domain.Operation) (any, error) {
 	switch operation {
 	case domain.Select:
@@ -32,16 +36,29 @@ func (s *NumbersService) Numbers(ctx context.Context, filter domain.NumbersFilte
 			return nil, err
 		}
 
-		if len(numbers) > filter.Limit && filter.Limit > 0 {
-			numbers = numbers[:filter.Limit]
-		}
+		fmt.Println(numbers)
 
 		return numbers, nil
 	case domain.Insert:
-		return nil, nil
+		id, err := s.repo.AddNumber(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println(id)
+
+		return id, nil
 	case domain.Update:
+		err := s.repo.ChangeNumber(ctx)
+		if err != nil {
+			return nil, err
+		}
 		return nil, nil
 	case domain.Delete:
+		err := s.repo.DeleteNumber(ctx)
+		if err != nil {
+			return nil, err
+		}
 		return nil, nil
 	default:
 		return nil, errors.New("service invalid operation")

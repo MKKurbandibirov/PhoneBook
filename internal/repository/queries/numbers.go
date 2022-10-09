@@ -1,49 +1,51 @@
 package queries
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v4"
+	"os"
 	"phonebook/internal/domain"
+	"phonebook/pkg/parsing"
+	"strconv"
 	"strings"
 )
 
 const (
-	SelectNumbersQuery           = `SELECT Id, FirstName, LastName, Country, Number FROM numbers`
-	SelectNumbersQueryByLastName = `SELECT Id, FirstName, LastName, Country, Number FROM numbers WHERE LastName = $1`
-	SelectNumbersQueryByCountry  = `SELECT Id, FirstName, LastName, Country, Number FROM numbers WHERE Country = $1`
+	SelectNumbersQuery       = `SELECT Id, FirstName, LastName, Country, Number FROM numbers`
+	SelectNumbersQueryByName = `SELECT Id, FirstName, LastName, Country, Number FROM numbers WHERE FirstName = $1 AND LastName = $2`
 )
 
-func ParsParameters() (string, string, error) {
-	var param string
-	fmt.Printf("Enter a parameter name:\n\t1: Last-name;\n\t2: Country\n")
-	_, err := fmt.Scan(&param)
-	if err != nil {
-		return "", "", err
+func ParsParameters() (string, []string, error) {
+	var scanner *bufio.Scanner = bufio.NewScanner(os.Stdin)
+	fmt.Print("Enter a person full name: ")
+	scanner.Scan()
+	text := scanner.Text()
+	if text == "" {
+		return SelectNumbersQuery, nil, nil
 	}
-	param = strings.ToLower(param)
-	if param == "last-name" || param == "lastname" || param == "1" {
-		var value string
-		fmt.Printf("\tLastName: ")
-		fmt.Scan(&value)
-		return SelectNumbersQueryByLastName, value, nil
-	} else if param == "country" || param == "2" {
-		var value string
-		fmt.Printf("\tCountry: ")
-		fmt.Scan(&value)
-		return SelectNumbersQueryByCountry, value, nil
+	name := strings.Split(text, " ")
+	if name[0] == "" || name[1] == "" {
+		return "", nil, errors.New("invalid name parameter")
+	} else {
+		return SelectNumbersQueryByName, name, nil
 	}
-	return SelectNumbersQuery, "", nil
 }
 
 func (q *Queries) Numbers(ctx context.Context) ([]domain.Number, error) {
+	filter, err := parsing.ParsFilter()
+	if err != nil {
+		return nil, err
+	}
 	query, value, err := ParsParameters()
 	if err != nil {
 		return nil, err
 	}
 	var rows pgx.Rows
-	if value != "" {
-		rows, err = q.pool.Query(ctx, query, value)
+	if value != nil {
+		rows, err = q.pool.Query(ctx, query, value[0], value[1])
 	} else {
 		rows, err = q.pool.Query(ctx, query)
 	}
@@ -66,5 +68,88 @@ func (q *Queries) Numbers(ctx context.Context) ([]domain.Number, error) {
 		return nil, err
 	}
 
+	if len(numbers) > filter.Limit && filter.Limit > 0 {
+		numbers = numbers[:filter.Limit]
+	}
 	return numbers, nil
+}
+
+const InsertNumberQuery = `INSERT INTO numbers (FirstName, LastName, Country, Number) VALUES($1, $2, $3, $4) RETURNING Id`
+
+func GetParameters() []string {
+	fmt.Print("Enter a person parameters:\n")
+	var scanner = bufio.NewScanner(os.Stdin)
+	var params = make([]string, 0)
+	for _, param := range [...]string{"FirsName", "LastName", "Country", "Number"} {
+		fmt.Printf("\t%s:", param)
+		scanner.Scan()
+		params = append(params, scanner.Text())
+	}
+	return params
+}
+
+func (q *Queries) AddNumber(ctx context.Context) (int, error) {
+	params := GetParameters()
+	num, err := strconv.Atoi(params[3])
+	if err != nil {
+		return -1, err
+	}
+	row := q.pool.QueryRow(ctx, InsertNumberQuery, params[0], params[1], params[2], num)
+	var id int
+	err = row.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+	return id, nil
+}
+
+func GetNumberId() (int, error) {
+	fmt.Print("Enter a person Id:\n\t")
+	var scanner = bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	text := scanner.Text()
+	id, err := strconv.Atoi(text)
+	if err != nil {
+		return -1, err
+	}
+	return id, nil
+}
+
+const UpdateNumberQuery = `UPDATE numbers SET FirstName = $1, LastName = $2, Country = $3, Number = $4  WHERE Id = $5`
+
+func (q *Queries) ChangeNumber(ctx context.Context) error {
+	id, err := GetNumberId()
+	if err != nil {
+		return err
+	}
+	params := GetParameters()
+	num, err := strconv.Atoi(params[3])
+	if err != nil {
+		return err
+	}
+	ct, err := q.pool.Exec(ctx, UpdateNumberQuery, params[0], params[1], params[2], num, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return errors.New("no one row affected")
+	}
+	return nil
+}
+
+const DeleteNumberQuery = `DELETE FROM numbers WHERE id = $1`
+
+func (q *Queries) DeleteNumber(ctx context.Context) error {
+	id, err := GetNumberId()
+	if err != nil {
+		return err
+	}
+	ct, err := q.pool.Exec(ctx, DeleteNumberQuery, id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return errors.New("no one row affected")
+	}
+	return nil
 }
